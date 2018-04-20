@@ -18,6 +18,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const chalk = require('chalk');
 const spawn = require('react-dev-utils/crossSpawn');
+const replace = require('replace-in-file');
 
 module.exports = function(
   appPath,
@@ -39,9 +40,13 @@ module.exports = function(
   appPackage.scripts = {
     start: 'react-scripts start',
     build: 'react-scripts build',
+    dev: 'react-scripts dev',
     test: 'react-scripts test --env=jsdom',
     eject: 'react-scripts eject',
+    travis: 'react-scripts travis',
   };
+
+  appPackage.homepage = ".";
 
   fs.writeFileSync(
     path.join(appPath, 'package.json'),
@@ -89,6 +94,18 @@ module.exports = function(
     }
   );
 
+  replace.sync({
+    files: [
+      path.join(appPath, '.container.yml'),
+      path.join(appPath, '.travis.yml'),
+    ],
+    from: /{{ APP_NAME }}/g,
+    to: appName
+  });
+
+  fs.chmodSync(path.join(appPath, '.travis.sh'), 0o755);
+  fs.chmodSync(path.join(appPath, 'config/build.sh'), 0o755);
+
   let command;
   let args;
 
@@ -99,6 +116,30 @@ module.exports = function(
     command = 'npm';
     args = ['install', '--save', verbose && '--verbose'].filter(e => e);
   }
+
+  // Install dev dependencies
+  const types = [
+    '@types/node',
+    '@types/react',
+    '@types/react-dom',
+    '@types/jest',
+    'typescript',
+  ];
+
+  console.log(
+    `Installing ${types.join(', ')} as dev dependencies ${command}...`
+  );
+  console.log();
+
+  const devArgs = args.concat('-D').concat(types);
+  const devProc = spawn.sync(command, devArgs, {
+    stdio: 'inherit',
+  });
+  if (devProc.status !== 0) {
+    console.error(`\`${command} ${devArgs.join(' ')}\` failed`);
+    return;
+  }
+
   args.push('react', 'react-dom');
 
   // Install additional template dependencies, if present
