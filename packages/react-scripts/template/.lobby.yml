@@ -1,0 +1,9 @@
+default: &default
+  strategy: 'nomad'
+targets:
+  integration:
+    <<: *default
+  staging:
+    <<: *default
+  production:
+    <<: *default

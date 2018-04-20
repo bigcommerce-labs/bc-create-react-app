@@ -1,0 +1,43 @@
+language: node_js
+
+node_js:
+  - "6.10"
+
+cache:
+  yarn:
+    true
+  directories:
+    - bower_components
+    - node_modules
+
+before_install:
+  # Repo for Yarn
+  - curl -o- -L https://yarnpkg.com/install.sh | bash -s -- --version 0.27.5
+  - export PATH=$HOME/.yarn/bin:$PATH
+
+install:
+  - yarn install
+
+services:
+  - docker
+
+sudo: required
+
+env:
+  matrix:
+    - CREATE_CONTAINER=true
+    - RUN_TESTS=true
+
+matrix:
+  fast_finish: true
+  allow_failures:
+    env: CREATE_CONTAINER=true
+
+script:
+  - ./.travis.sh
+
+notifications:
+  email: false
+  webhooks:
+    urls:
+      - https://launchbay.bigcommerce.net/api/v1/build_results/{{ APP_NAME }}

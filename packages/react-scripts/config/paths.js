@@ -11,10 +11,9 @@
 const path = require('path');
 const fs = require('fs');
 const url = require('url');
-const findMonorepo = require('react-dev-utils/workspaceUtils').findMonorepo;
 
 // Make sure any symlinks in the project folder are resolved:
-// https://github.com/facebook/create-react-app/issues/637
+// https://github.com/facebookincubator/create-react-app/issues/637
 const appDirectory = fs.realpathSync(process.cwd());
 const resolveApp = relativePath => path.resolve(appDirectory, relativePath);
 
@@ -50,20 +49,20 @@ function getServedPath(appPackageJson) {
 // config after eject: we're in ./config/
 module.exports = {
   dotenv: resolveApp('.env'),
-  appPath: resolveApp('.'),
   appBuild: resolveApp('build'),
   appPublic: resolveApp('public'),
   appHtml: resolveApp('public/index.html'),
-  appIndexJs: resolveApp('src/index.js'),
+  appIndexJs: resolveApp('src/index.tsx'),
   appPackageJson: resolveApp('package.json'),
   appSrc: resolveApp('src'),
-  testsSetup: resolveApp('src/setupTests.js'),
+  yarnLockFile: resolveApp('yarn.lock'),
+  testsSetup: resolveApp('src/setupTests.ts'),
   appNodeModules: resolveApp('node_modules'),
+  appTsConfig: resolveApp('tsconfig.json'),
+  appTsLint: resolveApp('tslint.json'),
   publicUrl: getPublicUrl(resolveApp('package.json')),
   servedPath: getServedPath(resolveApp('package.json')),
 };
-
-let checkForMonorepo = true;
 
 // @remove-on-eject-begin
 const resolveOwn = relativePath => path.resolve(__dirname, '..', relativePath);
@@ -75,11 +74,15 @@ module.exports = {
   appBuild: resolveApp('build'),
   appPublic: resolveApp('public'),
   appHtml: resolveApp('public/index.html'),
-  appIndexJs: resolveApp('src/index.js'),
+  appIndexJs: resolveApp('src/index.tsx'),
   appPackageJson: resolveApp('package.json'),
   appSrc: resolveApp('src'),
-  testsSetup: resolveApp('src/setupTests.js'),
+  yarnLockFile: resolveApp('yarn.lock'),
+  testsSetup: resolveApp('src/setupTests.ts'),
   appNodeModules: resolveApp('node_modules'),
+  appTsConfig: resolveApp('tsconfig.json'),
+  appTsTestConfig: resolveApp('tsconfig.test.json'),
+  appTsLint: resolveApp('tslint.json'),
   publicUrl: getPublicUrl(resolveApp('package.json')),
   servedPath: getServedPath(resolveApp('package.json')),
   // These properties only exist before ejecting:
@@ -87,24 +90,32 @@ module.exports = {
   ownNodeModules: resolveOwn('node_modules'), // This is empty on npm 3
 };
 
-// detect if template should be used, ie. when cwd is react-scripts itself
-const useTemplate =
-  appDirectory === fs.realpathSync(path.join(__dirname, '..'));
+const ownPackageJson = require('../package.json');
+const reactScriptsPath = resolveApp(`node_modules/${ownPackageJson.name}`);
+const reactScriptsLinked =
+  fs.existsSync(reactScriptsPath) &&
+  fs.lstatSync(reactScriptsPath).isSymbolicLink();
 
-checkForMonorepo = !useTemplate;
-
-if (useTemplate) {
+// config before publish: we're in ./packages/react-scripts/config/
+if (
+  !reactScriptsLinked &&
+  __dirname.indexOf(path.join('packages', 'react-scripts', 'config')) !== -1
+) {
   module.exports = {
     dotenv: resolveOwn('template/.env'),
     appPath: resolveApp('.'),
     appBuild: resolveOwn('../../build'),
     appPublic: resolveOwn('template/public'),
     appHtml: resolveOwn('template/public/index.html'),
-    appIndexJs: resolveOwn('template/src/index.js'),
+    appIndexJs: resolveOwn('template/src/index.tsx'),
     appPackageJson: resolveOwn('package.json'),
     appSrc: resolveOwn('template/src'),
-    testsSetup: resolveOwn('template/src/setupTests.js'),
+    yarnLockFile: resolveOwn('template/yarn.lock'),
+    testsSetup: resolveOwn('template/src/setupTests.ts'),
     appNodeModules: resolveOwn('node_modules'),
+    appTsConfig: resolveOwn('template/tsconfig.json'),
+    appTsLint: resolveOwn('template/tslint.json'),
+    appTsTestConfig: resolveOwn('template/tsconfig.test.json'),
     publicUrl: getPublicUrl(resolveOwn('package.json')),
     servedPath: getServedPath(resolveOwn('package.json')),
     // These properties only exist before ejecting:
@@ -113,19 +124,3 @@ if (useTemplate) {
   };
 }
 // @remove-on-eject-end
-
-module.exports.srcPaths = [module.exports.appSrc];
-
-module.exports.useYarn = fs.existsSync(
-  path.join(module.exports.appPath, 'yarn.lock')
-);
-
-if (checkForMonorepo) {
-  // if app is in a monorepo (lerna or yarn workspace), treat other packages in
-  // the monorepo as if they are app source
-  const mono = findMonorepo(appDirectory);
-  if (mono.isAppIncluded) {
-    Array.prototype.push.apply(module.exports.srcPaths, mono.pkgs);
-  }
-  module.exports.useYarn = module.exports.useYarn || mono.isYarnWs;
-}

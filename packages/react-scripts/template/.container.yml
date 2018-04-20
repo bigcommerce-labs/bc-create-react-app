@@ -1,0 +1,14 @@
+name: microapp-{{ APP_NAME }}
+base_image: language/static
+processes:
+  web:
+    cmd: nginx >> $LOG_DIR/nginx_startup_plain.log 2>&1
+    internal_domain_prefix: 'microapp-{{ APP_NAME }}'
+    external_domain_prefix: 'microapp-{{ APP_NAME }}'
+    public: true
+    health_check:
+      http:
+        port: 8080
+        # Required for http, https, and TCP. The URL on your application which the health check resides.
+        endpoint: /manifest.json
+    port: 8080
